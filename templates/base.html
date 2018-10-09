@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+{% load staticfiles %}
+<html lang="en">
+<head>
+     <script type="text/javascript" src="{% static 'js/jquery.12.4.min.js' %}"></script>
+    <meta charset="UTF-8">
+    <title>{% block title %}博客列表{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
+    <link rel="stylesheet" href="{% static 'css/blog.css' %}">
+{% block custom_css %}{% endblock %}
+{% block custom_js %}{% endblock %}
+</head>
+<body class="background">
+<div class="navbar navbar-default navbar-fixed-top">
+  <div class="container-fluid">
+    <!-- Brand and toggle get grouped for better mobile display -->
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">个人博客网站</a>
+    </div>
+
+    <!-- Collect the nav links, forms, and other content for toggling -->
+    <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+      <ul class="nav navbar-nav">
+        <li class="{% block active_home %}{% endblock %}"><a href="{% url 'home' %}">首页 <span class="sr-only">(current)</span></a></li>
+        <li class="{% block active_blog_list %}{% endblock %}"><a href="{% url 'blog:blog_list' %}">博客</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+    {% block content %}{% endblock %}
+    {% block blog_category %}{% endblock %}
+     {% block blog_dates %}{% endblock %}
+
+</body>
+</html>

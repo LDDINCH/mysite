@@ -1,0 +1,176 @@
+{% extends 'base.html' %}
+{% load staticfiles %}
+{% load comment_tags %}
+{% block title %}{{ blog.title }}{% endblock %}
+<div class="container">
+    <div class="row">
+        <div class="col-xs-10 col-xs-offset-1">
+            {% block content %}
+                <h3>{{ blog.title }}</h3>
+                <ul class="blog-message">
+                    <li>作者：{{ blog.author }}</li>
+                    <li>发表日期：{{ blog.createtime|date:"Y-m-d h:n:s" }}</li>
+                    <li>分类：<a href="{% url 'blog:blog_type_list' blog.blog_type.id %}">{{ blog.blog_type }}</a></li>
+                    <li>阅读（{{ blog.get_read_num }}）</li>
+                    <li>评论：({% get_comment_count blog %})</li>
+                </ul>
+            <div class="blog-content-desc">{{ blog.content|safe }}</div>
+                <div class="more-blog">
+                  <p>上一篇：
+                      {% if previous_blog %}
+                      <a href="{% url 'blog:blog_detail' previous_blog.id %}">
+                      {{ previous_blog.title }}
+                      </a>
+                      {% else %}
+                      这是第一篇文章
+                      {% endif %}
+                  </p>
+                  <p>下一篇：
+                      {% if next_blog %}
+                          <a href="{% url 'blog:blog_detail' next_blog.id %}">
+                          {{ next_blog.title }}
+                          </a>
+                      {% else %}
+                      这是最后一篇文章
+                      {% endif %}
+                  </p>
+                </div>
+
+        </div>
+   </div>
+ <div class="row">
+            <div class="col-xs-10 col-xs-offset-1">
+                 <div class="comment-area">
+                    <h3 class="comment-area-title">提交评论</h3>
+                    {% if user.is_authenticated %}
+                         <form id="comment_form" action="{% url 'comment:update_comment' %}" method="POST" style="overflow:hidden">
+                            <label>{{ user.username }}，欢迎评论~</label>
+                         <div id="reply_content_container" style="display:none;">
+                                <p id="reply_title">回复：</p>
+                                <div id="reply_content"></div>
+                         </div>
+                            {% csrf_token %}
+                         {% get_comment_form blog as comment_form %}
+                            {% for field in comment_form %}
+                                {{ field }}
+                            {% endfor %}
+                            <span id="comment_error" class="text-danger pull-left"></span>
+                            <input type="submit" value="评论" class="btn btn-primary pull-right">
+                        </form>
+                    {% else %}
+                       您尚未登录，登录之后方可评论~
+                        <a class="btn btn-primary" href="{% url 'login' %}?from={{ request.get_full_path }}">登录</a>
+                        <span>or</span>
+                        <a class="btn btn-primary" href="{% url 'register' %}?from={{ request.get_full_path }}">注册</a>
+                    {% endif %}
+                </div>
+                <div class="comment-area">
+                    <h3 class="comment-area-title">评论列表</h3>
+                      <div id="comment_list">
+                          {% get_comment_list blog as comments %}
+                          {% for comment in comments %}
+                            <div id="root_{{ comment.id }}" class="comment">
+                                <span>{{ comment.user.username }}</span>
+                                <span>({{ comment.comment_time|date:"Y-m-d H:i:s" }})：</span>
+                                <div id="comment_{{ comment.id }}">
+                                    {{ comment.comment_text|safe }}
+                                </div>
+                                <a href="javascript:reply({{ comment.id }});">回复</a>
+
+
+                                {% for reply in comment.root_comment.all %}
+                                    <div class="reply">
+                                        <span>{{ reply.user.username }}</span>
+                                        <span>({{ reply.comment_time|date:"Y-m-d H:i:s" }})</span>
+                                        <span>回复</span>
+                                        <span>{{ reply.reply_to.username }}：</span>
+                                        <div id="comment_{{ reply.id }}">
+                                            {{ reply.comment_text|safe }}
+                                        </div>
+                                        <a href="javascript:reply({{ reply.id }});">回复</a>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% empty %}
+                             <span id="no_comment">暂无评论</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+   {% block custom_js %}
+    <script type="text/javascript" src="{% static "js/jquery.12.4.min.js" %}"></script>
+    <script type="text/javascript" src="{% static "ckeditor/ckeditor-init.js" %}"></script>
+    <script type="text/javascript" src="{% static "ckeditor/ckeditor/ckeditor.js" %}"></script>
+     <script type="text/javascript">
+         function reply(reply_comment_id) {
+             $('#reply_comment_id').val(reply_comment_id);
+               var html = $("#comment_" + reply_comment_id).html();
+            $('#reply_content').html(html);
+            $('#reply_content_container').show();
+              $('html').animate({scrollTop: $('#comment_form').offset().top - 60}, 300, function(){
+                CKEDITOR.instances['id_comment_text'].focus();
+            });
+        }
+         function numFormat(num){
+                return ('00' + num).substr(-2);
+            }
+         function timeFormat(timestamp){
+            var datetime = new Date(timestamp * 1000);
+            var year = datetime.getFullYear();
+            var month = numFormat(datetime.getMonth() + 1);
+            var day = numFormat(datetime.getDate());
+            var hour = numFormat(datetime.getHours());
+            var minute = numFormat(datetime.getMinutes());
+            var second = numFormat(datetime.getSeconds());
+            return year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second;
+        }
+        $("#comment_form").submit(function(){
+            // 判断是否为空
+            $("#comment_error").text('');
+            if(CKEDITOR.instances["id_comment_text"].document.getBody().getText().trim()==''){
+                $("#comment_error").text('评论内容不能为空');
+                return false;
+            }
+            // 更新数据到textarea
+            CKEDITOR.instances['id_comment_text'].updateElement();
+            // 异步提交
+            $.ajax({
+                url: "{% url 'comment:update_comment' %}",
+                type: 'POST',
+                data: $(this).serialize(),
+                cache: false,
+                success: function(data){
+                    console.log(data);
+                    if(data['status']=="SUCCESS"){
+                         if($('#reply_comment_id').val()=='0'){
+                            // 插入评论
+                            var comment_html = '<div id="root_' + data['id'] + '" class="comment"><span>' + data['username'] + '</span><span> (' + timeFormat(data['comment_time']) + ')：</span><div id="comment_' + data['id'] + '">' + data['text'] + '</div><a href="javascript:reply(' + data['id'] + ');">回复</a></div>';
+                            $("#comment_list").prepend(comment_html);
+                        }else{
+                            // 插入回复
+                            var reply_html ='<div class="reply"><span>' + data['username'] + '</span><span> (' + timeFormat(data['comment_time']) + ')</span><span> 回复 </span><span>' + data['reply_to'] + '：</span><div id="comment_' + data['id'] + '">' + data['text'] + '</div><a href="javascript:reply(' + data['id'] + ');">回复</a></div>';
+                            $("#root_" + data['root_id']).append(reply_html);
+                        }
+                        // 清空编辑框的内容
+                        CKEDITOR.instances['id_comment_text'].setData('');
+                          $('#reply_content_container').hide();
+                          $('#reply_comment_id').val('0');
+                          $('#no_comment').remove();
+                    }else{
+                        // 显示错误信息
+                        $("#comment_error").text(data['message']);
+                    }
+                },
+                error: function(xhr){
+                    console.log(xhr);
+                }
+            });
+            return false;
+        });
+
+    </script>
+{% endblock %}
+        </div>
+</div>
+    {% endblock %}
+{% block active_blog_list %}active{% endblock %}
