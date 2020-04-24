@@ -1,5 +1,6 @@
 test1 001
 test2 002
+test3 003
 from django.shortcuts import render, get_object_or_404
 from .models import Blog, BlogType
 from read_record.models import ReadNum, ReadDetail
